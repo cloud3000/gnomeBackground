@@ -1,0 +1,12 @@
+{
+  "screenSize": "5760x1080",
+  "fsPath": [
+    "/home/michael/Downloads/backgrounds/*.jpg",
+    "/home/michael/Downloads/backgrounds/*.png",
+    "/home/michael/Downloads/backgrounds/*.jpeg",
+    "/home/michael/Downloads/backgrounds/*.webp"
+  ],
+  "delay": 60,
+  "dateStamp": true,
+  "fontSize": 96.0
+}
