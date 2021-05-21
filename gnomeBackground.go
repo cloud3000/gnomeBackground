@@ -18,6 +18,11 @@ import (
 	"gopkg.in/gographics/imagick.v2/imagick"
 )
 
+type screenSize struct {
+	Width  int `json:"width"`
+	Height int `json:"height"`
+}
+
 type dateStr struct {
 	Display         bool    `json:"display"`
 	Font            string  `json:"font"`
@@ -30,7 +35,7 @@ type dateStr struct {
 
 type config struct {
 	images     []string
-	ScreenSize string        `json:"screenSize"`
+	ScreenSize screenSize    `json:"screenSize"`
 	FsPath     []string      `json:"fsPath"`
 	Delay      time.Duration `json:"delay"`
 	DateStamp  dateStr       `json:"dateStamp"`
@@ -74,52 +79,43 @@ func draw_metrics(mw *imagick.MagickWand, dw *imagick.DrawingWand, dx *float64, 
 	}
 }
 
-func desktop(f string, c config) {
+func process(f string, c config) {
 	imagick.Initialize()
 	defer imagick.Terminate()
+
 	rightNow := time.Now()
-	_, err := imagick.ConvertImageCommand([]string{"convert", f, "-resize", c.ScreenSize, "/tmp/tempout.png"})
+	scrnSize := fmt.Sprintf("%dx%d", c.ScreenSize.Width, c.ScreenSize.Height)
+	_, err := imagick.ConvertImageCommand([]string{"convert", f, "-resize", scrnSize, "/tmp/tempout.png"})
 	if err != nil {
 		panic(err)
 	}
-
-	// Current coordinates of text
-	var dx, dy float64
-	// Width of a space in current font/size
-	var sx float64
 
 	mw := imagick.NewMagickWand()
 	dw := imagick.NewDrawingWand()
 	pw := imagick.NewPixelWand()
-
 	mw.ReadImage("/tmp/tempout.png")
-	// UnComment to Get original image size
-	//width := mw.GetImageWidth()
-	//height := mw.GetImageHeight()
-
-	// Calculate size
-	hWidth := uint(1920)
-	hHeight := uint(1080)
 
 	// Resize the image using the Lanczos filter
-	// The blur factor is a float, where > 1 is blurry, < 1 is sharp
-	err = mw.ResizeImage(hWidth, hHeight, imagick.FILTER_LANCZOS, 1)
+	// The blur factor is a float, where > 1 is blurry, < 1 is sharp, and sharp DOES NOT WORK FOR US!
+	err = mw.ResizeImage(uint(c.ScreenSize.Width), uint(c.ScreenSize.Height), imagick.FILTER_LANCZOS, 1)
 	if err != nil {
 		panic(err)
 	}
-	mw.SetSize(5760, 1080)
 	pw.SetColor(c.DateStamp.BackgroundColor)
 	dw.SetFillColor(pw)
-
 	mw.SetBackgroundColor(pw)
-	dx = 1
-	dw.SetFontSize(72)
-	dw.SetFont(c.DateStamp.Font)
-	fm := mw.QueryFontMetrics(dw, "M")
-	dy = fm.CharacterHeight + fm.Descender + 1000
 
-	// text
+	// Display the Date and Time if DateStamp.Display is true.
 	if c.DateStamp.Display {
+		// Current coordinates of text
+		var dx, dy float64
+		// Width of a space in current font/size
+		var sx float64
+		dx = 1
+		dw.SetFontSize(72)
+		dw.SetFont(c.DateStamp.Font)
+		fm := mw.QueryFontMetrics(dw, "M")
+		dy = fm.CharacterHeight + fm.Descender + 1000
 		dw.SetTextUnderColor(pw)
 		draw_setfont(mw, dw, c.DateStamp.Font, c.DateStamp.FontSize, c.DateStamp.Color, &sx)
 		draw_metrics(mw, dw, &dx, dy, sx,
@@ -165,22 +161,27 @@ func Exec_command(cmd string, args []string) []byte {
 }
 
 func main() {
-	var untilHellFreezesOver bool = true
+	var untilHellFreezesOver bool = true // How long does this run for?
 	cmd := string("/usr/bin/gsettings")
 	parm1 := []string{"set", "org.gnome.desktop.background", "picture-uri", "file:///tmp/out.png"}
 	parm2 := []string{"set", "org.gnome.desktop.background", "picture-options", "centered"}
-	config := readConf()
-
-	fmt.Printf("dimensions: %s Delay: %d Display Date is %v\n",
-		config.ScreenSize, config.Delay, config.DateStamp.Display)
-	fmt.Println("Getting image files from the following path(s):")
 	Exec_command(cmd, parm1)
 	Exec_command(cmd, parm2)
+
+	config := readConf()
+	fmt.Printf("dimensions: %dX%d Delay: %d Display Date is %v\n",
+		config.ScreenSize.Width,
+		config.ScreenSize.Height,
+		config.Delay,
+		config.DateStamp.Display)
+
+	fmt.Println("Getting image files from the following path(s):")
 
 	for _, xpath := range config.FsPath {
 		fmt.Printf("%s\n", xpath)
 	}
 
+	// Loading the images array, slice of images
 	if len(config.FsPath) > 1 {
 		for _, wildcard := range config.FsPath {
 			flist := List_dir(wildcard)
@@ -189,9 +190,11 @@ func main() {
 	} else {
 		config.images = List_dir(config.FsPath[0])
 	}
+
+	// Continually loop thru the images array 4-EVER!
 	for untilHellFreezesOver {
 		for _, image := range config.images {
-			desktop(image, config)
+			process(image, config)
 			time.Sleep(config.Delay * time.Second)
 		}
 	}
