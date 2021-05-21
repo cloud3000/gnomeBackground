@@ -169,32 +169,30 @@ func main() {
 	cmd := string("/usr/bin/gsettings")
 	parm1 := []string{"set", "org.gnome.desktop.background", "picture-uri", "file:///tmp/out.png"}
 	parm2 := []string{"set", "org.gnome.desktop.background", "picture-options", "centered"}
-	c := readConf()
+	config := readConf()
 
-	fmt.Println("STARTED")
-	fmt.Printf("dimensions: %s Delay: %d Display Date is %v\n", c.ScreenSize, c.Delay, c.DateStamp.Display)
+	fmt.Printf("dimensions: %s Delay: %d Display Date is %v\n",
+		config.ScreenSize, config.Delay, config.DateStamp.Display)
 	fmt.Println("Getting image files from the following path(s):")
 	Exec_command(cmd, parm1)
 	Exec_command(cmd, parm2)
 
-	for _, xpath := range c.FsPath {
+	for _, xpath := range config.FsPath {
 		fmt.Printf("%s\n", xpath)
 	}
 
-	if len(c.FsPath) > 1 {
-		for _, wildcard := range c.FsPath {
+	if len(config.FsPath) > 1 {
+		for _, wildcard := range config.FsPath {
 			flist := List_dir(wildcard)
-			c.images = append(c.images, flist...)
+			config.images = append(config.images, flist...)
 		}
 	} else {
-		c.images = List_dir(c.FsPath[0])
+		config.images = List_dir(config.FsPath[0])
 	}
 	for untilHellFreezesOver {
-		for _, f := range c.images {
-
-			// convert(f, c)
-			desktop(f, c)
-			time.Sleep(c.Delay * time.Second)
+		for _, image := range config.images {
+			desktop(image, config)
+			time.Sleep(config.Delay * time.Second)
 		}
 	}
 }
