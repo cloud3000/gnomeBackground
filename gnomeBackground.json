@@ -1,12 +1,23 @@
 {
-  "screenSize": "5760x1080",
+  "screenSize": "1920x1080",
   "fsPath": [
-    "/home/michael/Downloads/backgrounds/*.jpg",
-    "/home/michael/Downloads/backgrounds/*.png",
-    "/home/michael/Downloads/backgrounds/*.jpeg",
-    "/home/michael/Downloads/backgrounds/*.webp"
+    "/usr/share/backgrounds/*.svg",
+    "/usr/share/backgrounds/*.jpg",
+    "/usr/share/backgrounds/*.png",
+    "/usr/share/backgrounds/*.jpeg",
+    "/usr/share/backgrounds/pop/*.svg",
+    "/usr/share/backgrounds/pop/*.jpg",
+    "/usr/share/backgrounds/pop/*.png",
+    "/usr/share/backgrounds/pop/*.jpeg"
   ],
-  "delay": 60,
-  "dateStamp": true,
-  "fontSize": 96.0
+  "delay": 90,
+  "dateStamp": {
+    "display": true,
+    "font": "Bitstream-Charter",
+    "fontSize": 67.0,
+    "color": "#00000099",
+    "backgroundColor": "#FFFFFF25",
+    "position": "                                                    %v",
+    "format": "Monday  01/02/2006    03:04 "
+  }
 }

@@ -18,13 +18,22 @@ import (
 	"gopkg.in/gographics/imagick.v2/imagick"
 )
 
+type dateStr struct {
+	Display         bool    `json:"display"`
+	Font            string  `json:"font"`
+	FontSize        float64 `json:"fontSize"`
+	Color           string  `json:"color"`
+	BackgroundColor string  `json:"backgroundColor"`
+	Position        string  `json:"position"`
+	Format          string  `json:"format"`
+}
+
 type config struct {
 	images     []string
 	ScreenSize string        `json:"screenSize"`
 	FsPath     []string      `json:"fsPath"`
 	Delay      time.Duration `json:"delay"`
-	DateStamp  bool          `json:"dateStamp"`
-	FontSize   float64       `json:"fontSize"`
+	DateStamp  dateStr       `json:"dateStamp"`
 }
 
 func draw_setfont(mw *imagick.MagickWand, dw *imagick.DrawingWand, font string, size float64, colour string, sx *float64) {
@@ -65,9 +74,14 @@ func draw_metrics(mw *imagick.MagickWand, dw *imagick.DrawingWand, dx *float64, 
 	}
 }
 
-func addText(t string, c config) {
+func desktop(f string, c config) {
 	imagick.Initialize()
 	defer imagick.Terminate()
+	rightNow := time.Now()
+	_, err := imagick.ConvertImageCommand([]string{"convert", f, "-resize", c.ScreenSize, "/tmp/tempout.png"})
+	if err != nil {
+		panic(err)
+	}
 
 	// Current coordinates of text
 	var dx, dy float64
@@ -77,21 +91,39 @@ func addText(t string, c config) {
 	mw := imagick.NewMagickWand()
 	dw := imagick.NewDrawingWand()
 	pw := imagick.NewPixelWand()
-	//mw.SetImageAlphaChannel(imagick.CHANNEL_ALPHA)
+
 	mw.ReadImage("/tmp/tempout.png")
+	// UnComment to Get original image size
+	//width := mw.GetImageWidth()
+	//height := mw.GetImageHeight()
+
+	// Calculate size
+	hWidth := uint(1920)
+	hHeight := uint(1080)
+
+	// Resize the image using the Lanczos filter
+	// The blur factor is a float, where > 1 is blurry, < 1 is sharp
+	err = mw.ResizeImage(hWidth, hHeight, imagick.FILTER_LANCZOS, 1)
+	if err != nil {
+		panic(err)
+	}
 	mw.SetSize(5760, 1080)
-	dx = 200
-	dw.SetFontSize(72)
-	dw.SetFont("Times-New-Roman")
-	pw.SetColor("#FFFFFF")
+	pw.SetColor(c.DateStamp.BackgroundColor)
 	dw.SetFillColor(pw)
+
+	mw.SetBackgroundColor(pw)
+	dx = 1
+	dw.SetFontSize(72)
+	dw.SetFont(c.DateStamp.Font)
 	fm := mw.QueryFontMetrics(dw, "M")
 	dy = fm.CharacterHeight + fm.Descender + 1000
 
 	// text
-	if c.DateStamp {
-		draw_setfont(mw, dw, "Times-New-Roman", c.FontSize, "#000000", &sx)
-		draw_metrics(mw, dw, &dx, dy, sx, t)
+	if c.DateStamp.Display {
+		dw.SetTextUnderColor(pw)
+		draw_setfont(mw, dw, c.DateStamp.Font, c.DateStamp.FontSize, c.DateStamp.Color, &sx)
+		draw_metrics(mw, dw, &dx, dy, sx,
+			fmt.Sprintf(c.DateStamp.Position, rightNow.Format(c.DateStamp.Format)))
 		mw.DrawImage(dw)
 	}
 
@@ -132,23 +164,6 @@ func Exec_command(cmd string, args []string) []byte {
 	return out
 }
 
-func convert(f string, c config) {
-	imagick.Initialize()
-	defer imagick.Terminate()
-
-	// mw := imagick.NewMagickWand()
-	// dw := imagick.NewDrawingWand()
-	// pw := imagick.NewPixelWand()
-
-	_, err := imagick.ConvertImageCommand([]string{"convert", f, "-resize", c.ScreenSize, "/tmp/tempout.png"})
-	if err != nil {
-		panic(err)
-	}
-
-	// fmt.Printf("Metadata:\n%s\n", ret.Meta)
-	// mw.NewImage()
-	// mw.ReadImage("/tmp/out.png")
-}
 func main() {
 	var untilHellFreezesOver bool = true
 	cmd := string("/usr/bin/gsettings")
@@ -157,7 +172,7 @@ func main() {
 	c := readConf()
 
 	fmt.Println("STARTED")
-	fmt.Printf("dimensions: %s Delay: %d Display Date is %v\n", c.ScreenSize, c.Delay, c.DateStamp)
+	fmt.Printf("dimensions: %s Delay: %d Display Date is %v\n", c.ScreenSize, c.Delay, c.DateStamp.Display)
 	fmt.Println("Getting image files from the following path(s):")
 	Exec_command(cmd, parm1)
 	Exec_command(cmd, parm2)
@@ -176,9 +191,9 @@ func main() {
 	}
 	for untilHellFreezesOver {
 		for _, f := range c.images {
-			rightNow := time.Now()
-			convert(f, c)
-			addText(fmt.Sprintf("%v", rightNow.Format(time.RFC1123)), c)
+
+			// convert(f, c)
+			desktop(f, c)
 			time.Sleep(c.Delay * time.Second)
 		}
 	}
