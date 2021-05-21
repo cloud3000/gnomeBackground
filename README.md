@@ -8,7 +8,10 @@ Similar to Variety, but very primitive in comparison.
 
 ```json
 {
-  "screenSize": "1920x1080",
+  "screenSize": {
+    "width": 1920,
+    "height": 1080
+  },
   "fsPath": [
     "/usr/share/backgrounds/*.svg",
     "/usr/share/backgrounds/*.jpg",
